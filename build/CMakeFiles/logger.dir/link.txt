@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/logger.dir/link.d CMakeFiles/logger.dir/src/logger.cpp.o -o /home/omgitsmonday/Projects/logger/bin/logger
