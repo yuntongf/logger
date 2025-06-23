@@ -1,0 +1,3 @@
+/home/omgitsmonday/Projects/logger/build/CMakeFiles/logger.dir
+/home/omgitsmonday/Projects/logger/build/CMakeFiles/edit_cache.dir
+/home/omgitsmonday/Projects/logger/build/CMakeFiles/rebuild_cache.dir
