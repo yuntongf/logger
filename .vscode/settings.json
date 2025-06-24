@@ -65,6 +65,8 @@
         "list": "cpp",
         "unordered_set": "cpp",
         "executor": "cpp",
-        "netfwd": "cpp"
+        "netfwd": "cpp",
+        "filesystem": "cpp",
+        "source_location": "cpp"
     }
 }

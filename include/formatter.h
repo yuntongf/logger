@@ -3,12 +3,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <string_view>
-
-struct SourceLocation {
-    std::filesystem::path filepath;
-    std::size_t thread_id;
-    std::size_t line_num;
-};
+#include <source_location>
 
 enum class LogLevel {
     DEBUG,
@@ -18,13 +13,13 @@ enum class LogLevel {
 };
 
 struct LogMsg {
-    SourceLocation location;
+    std::source_location location;
     LogLevel level;
-    std::string_view message;
+    std::string_view msg;
 };
 
 /* given LogMsg, serialize it */
-class Formatter {
-
-    Formatter(const LogMsg& msg);
+class IFormatter {
+public:
+    virtual void serialize(const LogMsg& msg, void* dest) const = 0;
 };

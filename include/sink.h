@@ -3,16 +3,17 @@
 #include <cstddef>
 
 #include <filesystem>
+#include <memory>
 
 #include "mem_mapper.h"
-#include "formatter.h"
+#include "effective_formatter.h"
 
 struct SinkConfig {
     std::filesystem::path dir;
 
 };
 
-class Sink {    
+class Sink {
 public:
     Sink();
 
@@ -20,6 +21,9 @@ public:
 
     std::size_t capacity() const;
 
+    void log(LogMsg msg);
+
 private:
-    MemMapper mm_;
+    std::unique_ptr<MemMapper> mm_;
+    std::unique_ptr<EffectiveFormatter> formatter_;
 };
