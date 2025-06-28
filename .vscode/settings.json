@@ -68,6 +68,7 @@
         "netfwd": "cpp",
         "filesystem": "cpp",
         "source_location": "cpp",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "cinttypes": "cpp"
     }
 }

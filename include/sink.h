@@ -7,6 +7,7 @@
 
 #include "mem_mapper.h"
 #include "effective_formatter.h"
+#include "encryptor.h"
 
 struct SinkConfig {
     std::filesystem::path dir;
@@ -26,4 +27,5 @@ public:
 private:
     std::unique_ptr<MemMapper> mm_;
     std::unique_ptr<EffectiveFormatter> formatter_;
+    std::unique_ptr<Encryptor> encryptor_;
 };
