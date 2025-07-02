@@ -13,7 +13,6 @@ MemMapper::MemMapper(MemMapper::fpath path) : file_(std::move(path)) {
 
 MemMapper::~MemMapper() {
     unmap_();
-    close(fd_);
 }
 
 void MemMapper::push(const void* data, std::size_t size) {
@@ -38,6 +37,10 @@ uint8_t* MemMapper::data() const {
 
 void MemMapper::clear() {
     header_->data_size = 0;
+}
+
+int MemMapper::getFd() const {
+    return fd_;
 }
 
 void MemMapper::reserve_(const std::size_t size) {

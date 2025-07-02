@@ -27,6 +27,7 @@ public:
 
     MemMapper(MemMapper&& other) = delete;
 
+    /* Unmaps the file but does not close it */
     ~MemMapper();
 
     [[nodiscard]] inline bool empty() const;
@@ -39,6 +40,8 @@ public:
     uint8_t* data() const;
 
     inline void clear();
+
+    inline int getFd() const;
 
 private:
     void* mmap_(void* ptr, const std::size_t size);

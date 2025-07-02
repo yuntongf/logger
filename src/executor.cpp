@@ -33,8 +33,11 @@ template <typename T, typename R, typename F, typename... Args>
 auto Executor::postDelayedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
     using ret_type = std::future<std::invoke_result_t<F, Args...>>;
+    if (tag_to_runner_.find(tag) == tag_to_runner_.end()) {
+        throw std::runtime_error("Runner does not exist!");
+    }
     auto task = std::packaged_task<ret_type()>(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+        std::bind(postTask, this, tag, std::forward<F>(f), std::forward<Args>(args)...);
     );
     auto res = task.get_future();
     scheduler_->postDelayedTask(std::move(task), period);
@@ -43,8 +46,11 @@ auto Executor::postDelayedTask(Tag tag, std::chrono::duration<T, R> period, F&& 
 
 template <typename T, typename R, typename F, typename... Args> 
 ScheduledTask::TaskId Executor::postRepeatedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args) {
+    if (tag_to_runner_.find(tag) == tag_to_runner_.end()) {
+        throw std::runtime_error("Runner does not exist!");
+    }
     auto task_id = scheduler_->postRepeatedTask(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...), 
+        std::bind(postTask, this, tag, std::forward<F>(f), std::forward<Args>(args)...), 
         period
     );
     return task_id;

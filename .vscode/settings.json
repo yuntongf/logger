@@ -69,6 +69,7 @@
         "filesystem": "cpp",
         "source_location": "cpp",
         "cstring": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "iostream": "cpp"
     }
 }

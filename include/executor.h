@@ -9,8 +9,17 @@
 #include "threadpool.h"
 #include "scheduler.h"
 
+enum class ExecutorTag {
+    FILE_MANAGER,
+    FORMATTER,
+    COMPRESSOR,
+    ENCRYPTOR,
+    MEM_MAPPER,
+    FLUSHER
+};
+
 class Executor {
-using Tag = std::string_view;
+using Tag = ExecutorTag;
 using Runner = ThreadPool;
 
 public:

@@ -8,6 +8,8 @@
 #include <vector>
 #include <stdexcept>
 #include <cassert>
+#include <iostream>
+
 
 namespace util::encryption {
 
