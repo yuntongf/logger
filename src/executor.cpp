@@ -14,21 +14,6 @@ void Executor::stopRunner(Tag tag) {
     }
 }
 
-template <typename F, typename... Args> 
-auto Executor::postTask(Tag tag, F&& f, Args&&... args)
-    -> std::future<std::invoke_result_t<F, Args...>> {
-    using ret_type = std::invoke_result_t<F, Args...>;
-    if (tag_to_runner_.find(tag) == tag_to_runner_.end()) {
-        throw std::runtime_error("Runner does not exist!");
-    }
-    auto task = std::packaged_task<ret_type()>(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
-    );
-    auto ret = task.get_future();
-    tag_to_runner_[tag]->submit(std::move(task));
-    return ret;
-}
-
 template <typename T, typename R, typename F, typename... Args> 
 auto Executor::postDelayedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args)
     -> std::future<std::invoke_result_t<F, Args...>> {
@@ -37,7 +22,7 @@ auto Executor::postDelayedTask(Tag tag, std::chrono::duration<T, R> period, F&& 
         throw std::runtime_error("Runner does not exist!");
     }
     auto task = std::packaged_task<ret_type()>(
-        std::bind(postTask, this, tag, std::forward<F>(f), std::forward<Args>(args)...);
+        std::bind(postTask, this, tag, std::forward<F>(f), std::forward<Args>(args)...)
     );
     auto res = task.get_future();
     scheduler_->postDelayedTask(std::move(task), period);
@@ -45,7 +30,7 @@ auto Executor::postDelayedTask(Tag tag, std::chrono::duration<T, R> period, F&& 
 }
 
 template <typename T, typename R, typename F, typename... Args> 
-ScheduledTask::TaskId Executor::postRepeatedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args) {
+Scheduler::ScheduledTask::TaskId Executor::postRepeatedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args) {
     if (tag_to_runner_.find(tag) == tag_to_runner_.end()) {
         throw std::runtime_error("Runner does not exist!");
     }
@@ -56,7 +41,7 @@ ScheduledTask::TaskId Executor::postRepeatedTask(Tag tag, std::chrono::duration<
     return task_id;
 }
 
-void Executor::cancelTask(ScheduledTask::TaskId id) {
+void Executor::cancelTask(Scheduler::ScheduledTask::TaskId id) {
     scheduler_->cancelTask(id);
 }
 

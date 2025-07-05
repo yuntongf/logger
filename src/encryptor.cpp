@@ -1,11 +1,11 @@
 #include "encryptor.h"
 
-Encryptor::Encryptor(fpath server_key_fpath, fpath client_key_fpath) {
-    get_server_public_key_(server_key_fpath);
+Encryptor::Encryptor() {
+    read_server_public_key_();
     init_client_key_();
 
     // Save client public key
-    FILE* fp = fopen(client_key_fpath.c_str(), "w");
+    FILE* fp = fopen(CLIENT_KEY_FILE_PATH, "w");
     PEM_write_PUBKEY(fp, client_pair_key_);
     // error handling
 }
@@ -28,9 +28,21 @@ void Encryptor::encrypt(void* data, const size_t size) {
     memcpy(data, ciphertext.data(), size);
 }
 
-void Encryptor::get_server_public_key_(fpath path) {
-    FILE* fp = fopen(path.c_str(), "r");
-    server_public_key_ = PEM_read_PUBKEY(fp, nullptr, nullptr, nullptr);
+void Encryptor::read_server_public_key_() {
+    FILE* fp = fopen(SERVER_KEY_FILE_PATH, "r");
+    if (!fp) {
+        throw std::runtime_error("Failed to open server public key file: " + std::string(SERVER_KEY_FILE_PATH));
+    }
+
+    // Use RAII or manual cleanup
+    EVP_PKEY* key = PEM_read_PUBKEY(fp, nullptr, nullptr, nullptr);
+    fclose(fp);
+
+    if (!key) {
+        throw OpenSSLError("Failed to read public key");
+    }
+
+    server_public_key_ = key;
 }
 
 void Encryptor::init_client_key_() {

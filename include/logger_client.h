@@ -9,10 +9,6 @@
 
 class LoggerClient {
 public:
-    LoggerClient();
-
-    LoggerClient(std::filesystem::path& path);
-
     inline void info(std::string_view msg) const {
         log(LogLevel::INFO, msg);
     }
@@ -27,6 +23,11 @@ public:
 
     inline void error(std::string_view msg) const {
         log(LogLevel::ERROR, msg);
+    }
+
+    void addFileSink(const std::string& folder, LogLevel level) {
+        SinkConfig config = {folder, level};
+        sinks_.emplace_back(std::make_unique<Sink>(std::move(config)));
     }
     
 private:

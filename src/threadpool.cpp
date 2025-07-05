@@ -30,21 +30,6 @@ ThreadPool::~ThreadPool() {
     }
 }
 
-template <typename F, typename... Args> 
-auto ThreadPool::submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
-    using ret_type = std::future<std::invoke_result_t<F, Args...>>;
-    auto task = std::packaged_task<std::future<ret_type>()>(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...);
-    );
-    auto ret = task.get_future();
-    {
-        std::unique_lock<std::mutex> lock(mtx_);
-        jobs_.push([task = std::move(task)]{task();});
-        cv_.notify_one();
-    }
-    return ret;
-}
-
 void ThreadPool::resume() {
     if (stop_.load()) {
         stop_.store(false);

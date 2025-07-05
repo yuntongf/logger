@@ -10,28 +10,29 @@
 
 #include "threadpool.h"
 
-/* This class need not be thread-safe */
-struct ScheduledTask {
-    using TimePoint = Scheduler::Clock::time_point;
-    using Delta = Scheduler::Clock::duration;
-    using TaskId = uint64_t;
-
-    TaskId id;
-    TimePoint start_time;
-    Delta delta;
-    ThreadPool::Task task;
-    bool repeated;
-
-    bool operator<(const ScheduledTask& other) const {
-        return start_time + delta > other.start_time + other.delta;
-    }
-};
-
 class Scheduler {
     using Clock = std::chrono::high_resolution_clock;
-    friend ScheduledTask;
 public:
+    /* This class need not be thread-safe */
+    struct ScheduledTask {
+        using TimePoint = Clock::time_point;
+        using Delta = Clock::duration;
+        using TaskId = uint64_t;
+
+        TaskId id;
+        TimePoint start_time;
+        Delta delta;
+        ThreadPool::Task task;
+        bool repeated;
+
+        bool operator<(const ScheduledTask& other) const {
+            return start_time + delta > other.start_time + other.delta;
+        }
+    };
+
     Scheduler();
+
+    ~Scheduler();
 
     Scheduler(const Scheduler& other) = delete;
 

@@ -7,6 +7,10 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <cerrno>
+
+
+#include "util.h"
 
 /* Wrapper around mmap */
 class MemMapper {
@@ -21,7 +25,7 @@ class MemMapper {
 public:
     MemMapper() = delete;
 
-    MemMapper(fpath path);
+    MemMapper(int fd);
 
     MemMapper(const MemMapper& other) = delete;
 
@@ -30,10 +34,15 @@ public:
     /* Unmaps the file but does not close it */
     ~MemMapper();
 
-    [[nodiscard]] inline bool empty() const;
+    [[nodiscard]] inline bool empty() const {
+        return header_->data_size == 0;
+    }
 
     // size calculation does not include header
-    inline double getRatio() const;
+    inline double getRatio() const {
+        std::size_t data_capacity = capacity_ - sizeof(Header);
+        return (double) header_->data_size / (double) data_capacity;
+    }
 
     void push(const void* data, std::size_t size);
 
@@ -44,16 +53,35 @@ public:
     inline int getFd() const;
 
 private:
-    void* mmap_(void* ptr, const std::size_t size);
+    inline void* mmap_(void* ptr, const std::size_t size) {
+        void* result = mmap(ptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
 
-    void unmap_();
+        if (result == MAP_FAILED) {
+            throw std::runtime_error("mmap failed: " + std::string(strerror(errno)));
+        }
 
-    std::size_t getPageSize_() const;
+        return result;
+    }
+
+    inline void unmap_() {
+        if (data_ && capacity_ > 0) {
+            if (munmap(data_, capacity_) != 0) {
+                throw std::runtime_error("munmap failed: " + std::string(strerror(errno)));
+            }
+            data_ = nullptr;
+            header_ = nullptr;
+            capacity_ = 0;
+        }
+    }
+
+    inline std::size_t getPageSize_() const {
+        return static_cast<std::size_t>(::getpagesize());
+    }
 
     /* Reserve space, could potentially remap */
     void reserve_(const std::size_t size);
 
-    void init_();
+    void init_header();
 
 private:
     Header* header_ = nullptr;

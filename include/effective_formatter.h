@@ -4,5 +4,5 @@
 
 class EffectiveFormatter : public IFormatter {
 public:
-    void serialize(const LogMsg& msg, void* dest) const override;
+    void serialize(const LogMsg& msg, void* dest, std::size_t& output_size) const override;
 };

@@ -9,7 +9,63 @@
 #include <stdexcept>
 #include <cassert>
 #include <iostream>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 
+namespace util::fs {
+    using fpath = std::filesystem::path;
+
+    inline int open_rw_file(fpath dir, const std::string& filename) {
+        if (!std::filesystem::exists(dir)) {
+            throw std::runtime_error("directory " + std::string(dir) + " does not exist");
+        }
+        fpath path = dir / filename;
+        int fd = open(path.c_str(), O_RDWR | O_CREAT);
+        if (fd == -1) {
+            perror("failed to open cache file");
+        }
+        return fd;
+    }
+
+    inline void close_file(int fd) {
+        close(fd);
+    }
+
+    inline std::size_t get_file_size(int fd) {
+        struct stat st;
+        if (fstat(fd, &st) != 0) {
+            close_file(fd);
+            perror("failed to get file size");
+        }
+        return static_cast<std::size_t>(st.st_size);
+    }
+
+    inline void move_file_content(int fd_in, int fd_out) {
+        constexpr size_t BUFFER_SIZE = 8192;
+        char buffer[BUFFER_SIZE];
+
+        while (true) {
+            ssize_t bytes_read = read(fd_in, buffer, BUFFER_SIZE);
+            if (bytes_read < 0) {
+                if (errno == EINTR) continue;
+                throw std::runtime_error("read failed: " + std::string(strerror(errno)));
+            }
+            if (bytes_read == 0) break; // EOF
+
+            ssize_t total_written = 0;
+            while (total_written < bytes_read) {
+                ssize_t bytes_written = write(fd_out, buffer + total_written, bytes_read - total_written);
+                if (bytes_written < 0) {
+                    if (errno == EINTR) continue;
+                    throw std::runtime_error("write failed: " + std::string(strerror(errno)));
+                }
+                total_written += bytes_written;
+            }
+        }
+    }
+}
 
 namespace util::encryption {
 
@@ -82,6 +138,12 @@ inline void aes_ctr_encrypt(const std::vector<unsigned char>& key,
     EVP_CIPHER_CTX_free(ctx);
 }
 
+inline std::vector<unsigned char> generate_iv(std::size_t len = 16) {
+    std::vector<unsigned char> iv(len);
+    if (!RAND_bytes(iv.data(), len))
+        THROW_OPENSSL_ERR("RAND_bytes failed");
+    return iv;
+}
 inline void aes_ctr_decrypt(const std::vector<unsigned char>& key,
                      const std::vector<unsigned char>& ciphertext,
                      std::vector<unsigned char>& plaintext) {
@@ -108,13 +170,6 @@ inline std::vector<unsigned char> sha256(const std::vector<unsigned char>& data)
     std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
     SHA256(data.data(), data.size(), hash.data());
     return hash;
-}
-
-inline std::vector<unsigned char> generate_iv(std::size_t len = 16) {
-    std::vector<unsigned char> iv(len);
-    if (!RAND_bytes(iv.data(), len))
-        THROW_OPENSSL_ERR("RAND_bytes failed");
-    return iv;
 }
 
 }

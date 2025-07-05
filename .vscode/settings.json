@@ -70,6 +70,8 @@
         "source_location": "cpp",
         "cstring": "cpp",
         "cinttypes": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "map": "cpp",
+        "set": "cpp"
     }
 }

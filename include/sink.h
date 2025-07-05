@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <mutex>
 
 #include "mem_mapper.h"
 #include "effective_formatter.h"
@@ -38,4 +39,5 @@ private:
     std::unique_ptr<MemMapper> mem_mapper_;
     int main_cache_fd_;
     int sub_cache_fd_;
+    std::mutex mtx_;
 };

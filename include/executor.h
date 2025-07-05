@@ -10,12 +10,7 @@
 #include "scheduler.h"
 
 enum class ExecutorTag {
-    FILE_MANAGER,
-    FORMATTER,
-    COMPRESSOR,
-    ENCRYPTOR,
-    MEM_MAPPER,
-    FLUSHER
+    FILE_WRITE_BACK
 };
 
 class Executor {
@@ -37,16 +32,27 @@ public:
 
     template <typename F, typename... Args> 
     auto postTask(Tag tag, F&& f, Args&&... args)
-        -> std::future<std::invoke_result_t<F, Args...>>;
+        -> std::future<std::invoke_result_t<F, Args...>> {
+        using ret_type = std::invoke_result_t<F, Args...>;
+        if (tag_to_runner_.find(tag) == tag_to_runner_.end()) {
+            throw std::runtime_error("Runner does not exist!");
+        }
+        auto task = std::packaged_task<ret_type()>(
+            std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+        );
+        auto ret = task.get_future();
+        tag_to_runner_[tag]->submit(std::move(task));
+        return ret;
+    }
 
     template <typename T, typename R, typename F, typename... Args> 
     auto postDelayedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args)
         -> std::future<std::invoke_result_t<F, Args...>>;
 
     template <typename T, typename R, typename F, typename... Args> 
-    ScheduledTask::TaskId postRepeatedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args);
+    Scheduler::ScheduledTask::TaskId postRepeatedTask(Tag tag, std::chrono::duration<T, R> period, F&& f, Args&&... args);
 
-    void cancelTask(ScheduledTask::TaskId id);
+    void cancelTask(Scheduler::ScheduledTask::TaskId id);
 
     void start();
 

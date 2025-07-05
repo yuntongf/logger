@@ -1,60 +1,51 @@
 
 #include "sink.h"
 
-constexpr SinkConfig DEFAULT_LOG_CONFIG = {"/log", LogLevel::INFO};
-constexpr std::string CACHE_A_FILE = "cache_a";
-constexpr std::string CACHE_B_FILE = "cache_b";
-constexpr std::string SERVER_KEY_FILE = "../reader.pem";
-constexpr std::string CLIENT_KEY_FILE = "../writer.pem";
-
+#define CACHE_A_FILE_NAME "cache_a.log"
+#define CACHE_B_FILE_NAME "cache_b.log"
 #define LOG_ERR(msg) std::cout << msg << "\n";
+
+constexpr SinkConfig DEFAULT_LOG_CONFIG = {"/log", LogLevel::INFO};
 
 Sink::Sink() : Sink(DEFAULT_LOG_CONFIG) {}
 
 Sink::Sink(const SinkConfig& config) {
     fpath log_dir(config.folder_str);
-    fpath main_cache_file = log_dir / CACHE_A_FILE;
-    fpath sub_cache_file = log_dir / CACHE_B_FILE;
-    fpath server_key_file_path(SERVER_KEY_FILE);
-    fpath client_key_file_path(CLIENT_KEY_FILE);
+    fpath main_cache_file = log_dir / CACHE_A_FILE_NAME;
+    fpath sub_cache_file = log_dir / CACHE_B_FILE_NAME;
 
     executor_ = std::make_unique<Executor>();
-    executor_->addRunner(ExecutorTag::FILE_MANAGER);
-    executor_->addRunner(ExecutorTag::FORMATTER);
-    executor_->addRunner(ExecutorTag::COMPRESSOR);
-    executor_->addRunner(ExecutorTag::ENCRYPTOR);
-    executor_->addRunner(ExecutorTag::MEM_MAPPER);
-    executor_->addRunner(ExecutorTag::FLUSHER);
+    executor_->addRunner(ExecutorTag::FILE_WRITE_BACK);
 
     file_manager_ = std::make_unique<FileManager>(log_dir);
     formatter_ = std::make_unique<EffectiveFormatter>();
     compressor_ = std::make_unique<ZlibCompress>();
-    encryptor_ = std::make_unique<Encryptor>(server_key_file_path, client_key_file_path);
+    encryptor_ = std::make_unique<Encryptor>();
 
-    mem_mapper_ = std::make_unique<MemMapper>(main_cache_file);
-    main_cache_fd_ = mem_mapper_->getFd();
-    int fd = open(sub_cache_file.c_str(), O_RDWR | O_CREAT);
-    if (fd == -1) {
-        perror("failed to open sub cache file");
-    }
-    sub_cache_fd_ = fd;
+    main_cache_fd_ = file_manager_->openCacheFile(CACHE_A_FILE_NAME);
+    sub_cache_fd_ = file_manager_->openCacheFile(CACHE_B_FILE_NAME);
+
+    mem_mapper_ = std::make_unique<MemMapper>(main_cache_fd_);
 }
 
 void Sink::log(LogMsg msg) {
-    uint8_t data;
-    try {
-        auto format_future = executor_->postTask(ExecutorTag::FORMATTER, [this, msg, &data]{
-            formatter_->serialize(msg, &data);
-        });
-        format_future.wait();
-    } catch (const std::runtime_error& e) {
-        LOG_ERR(std::string("Formatter error: ") + e.what());
-    }
+    uint8_t data;   
+    std::size_t size;
+    formatter_->serialize(msg, &data, size);
+    {
+        std::unique_lock<std::mutex> lck(mtx_);
 
-    try {
-        std::mutex mtx;
-        auto f = executor_->postTask(ExecutorTag::COMPRESSOR, [this, ]{
+        uint8_t output_data;
+        auto estimate_size = compressor_->compressBound(size);
+        auto output_size = compressor_->compress(&data, size, &output_data, estimate_size);
+        encryptor_->encrypt(&output_data, output_size);
+        mem_mapper_->push(&output_data, output_data);
 
-        });
+        if (mem_mapper_->getRatio() > 0.8) {
+            std::swap(main_cache_fd_, sub_cache_fd_);
+            executor_->postTask(ExecutorTag::FILE_WRITE_BACK, [this]{
+                file_manager_->writeCacheToLogFile(sub_cache_fd_);
+            });
+        }
     }
 }

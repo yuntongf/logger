@@ -1,14 +1,13 @@
 #include "mem_mapper.h"
 
-MemMapper::MemMapper(MemMapper::fpath path) : file_(std::move(path)) {
-    std::size_t file_size = std::filesystem::file_size(file_);
-    std::size_t size = std::max(file_size, DEFAULT_SIZE);
-    fd_ = open(path.c_str(), O_RDWR);
-    void* ptr = mmap_(nullptr, size);
+MemMapper::MemMapper(int cache_file_fd) : fd_(cache_file_fd) {
+    auto filesize = util::fs::get_file_size(fd_);
+    capacity_ = std::max(filesize, DEFAULT_SIZE);
+
+    void* ptr = mmap_(nullptr, capacity_);
     header_ = static_cast<Header*>(ptr);
+    init_header();
     data_ = static_cast<uint8_t*>(ptr) + sizeof(Header);
-    capacity_ = size;
-    init_();
 };
 
 MemMapper::~MemMapper() {
@@ -20,15 +19,6 @@ void MemMapper::push(const void* data, std::size_t size) {
     reserve_(new_size);
     memcpy(data_ + header_->data_size, data, size);
     header_->data_size = new_size;
-}
-
-bool MemMapper::empty() const {
-    return header_->data_size == 0;
-}
-
-double MemMapper::getRatio() const {
-    std::size_t data_capacity = capacity_ - sizeof(Header);
-    return (double) header_->data_size / (double) data_capacity;
 }
 
 uint8_t* MemMapper::data() const {
@@ -49,12 +39,19 @@ void MemMapper::reserve_(const std::size_t size) {
     }
     std::size_t page_size = getPageSize_();
     std::size_t new_capacity = ((size / page_size) + 1) * page_size;
+
+    if (ftruncate(fd_, new_capacity) == -1) {
+        throw std::runtime_error("ftruncate failed: " + std::string(strerror(errno)));
+    }
+
     unmap_();
-    mmap_(header_, new_capacity);
+    auto ptr = mmap_(nullptr, new_capacity);
+    header_ = static_cast<Header*>(ptr);
     capacity_ = new_capacity;
+    data_ = static_cast<uint8_t*>(ptr + sizeof(Header));
 }
 
-void MemMapper::init_() {
+void MemMapper::init_header() {
     if (header_->magic == MemMapper::MAGIC) {
         return;
     } 

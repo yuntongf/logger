@@ -26,9 +26,20 @@ public:
 
     ~ThreadPool();
 
-    template <typename F, typename... Args>
-    auto submit(F&& f, Args&&... args)
-        -> std::future<std::invoke_result_t<F, Args...>>;
+    template <typename F, typename... Args> 
+    auto submit(F&& f, Args&&... args) -> std::future<std::invoke_result_t<F, Args...>> {
+        using ret_type = std::invoke_result_t<F, Args...>;
+        auto task = std::make_shared<std::packaged_task<ret_type()>>(
+            std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+        );
+        auto ret = task->get_future();
+        {
+            std::unique_lock<std::mutex> lock(mtx_);
+            jobs_.push([task]{(*task)();});
+            cv_.notify_one();
+        }
+        return ret;
+    }
 
     void resume();
 
