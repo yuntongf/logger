@@ -21,7 +21,7 @@ public:
 
     ~Encryptor();
 
-    void encrypt(void* data, const size_t size);
+    void encrypt(u_int8_t*& data, const size_t size);
 
 private:
     void read_server_public_key_();

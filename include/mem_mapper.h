@@ -44,7 +44,7 @@ public:
         return (double) header_->data_size / (double) data_capacity;
     }
 
-    void push(const void* data, std::size_t size);
+    void push(const uint8_t* data, const std::size_t size);
 
     uint8_t* data() const;
 
@@ -64,8 +64,8 @@ private:
     }
 
     inline void unmap_() {
-        if (data_ && capacity_ > 0) {
-            if (munmap(data_, capacity_) != 0) {
+        if (header_ != nullptr && capacity_ > 0) {
+            if (munmap(header_, capacity_) != 0) {
                 throw std::runtime_error("munmap failed: " + std::string(strerror(errno)));
             }
             data_ = nullptr;

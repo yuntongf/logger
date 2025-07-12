@@ -16,7 +16,7 @@ Encryptor::~Encryptor() {
     EVP_cleanup();
 }
 
-void Encryptor::encrypt(void* data, const size_t size) {
+void Encryptor::encrypt(uint8_t*& data, const std::size_t size) {
     unsigned char* input_data = static_cast<unsigned char*>(data);
     std::vector<unsigned char> ciphertext, iv;
     util::encryption::aes_ctr_encrypt(

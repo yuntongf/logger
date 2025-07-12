@@ -3,6 +3,7 @@
 MemMapper::MemMapper(int cache_file_fd) : fd_(cache_file_fd) {
     auto filesize = util::fs::get_file_size(fd_);
     capacity_ = std::max(filesize, DEFAULT_SIZE);
+    util::fs::truncate_file(fd_, capacity_);
 
     void* ptr = mmap_(nullptr, capacity_);
     header_ = static_cast<Header*>(ptr);
@@ -14,7 +15,7 @@ MemMapper::~MemMapper() {
     unmap_();
 }
 
-void MemMapper::push(const void* data, std::size_t size) {
+void MemMapper::push(const uint8_t* data, const std::size_t size) {
     std::size_t new_size = header_->data_size + size;
     reserve_(new_size);
     memcpy(data_ + header_->data_size, data, size);
@@ -39,10 +40,7 @@ void MemMapper::reserve_(const std::size_t size) {
     }
     std::size_t page_size = getPageSize_();
     std::size_t new_capacity = ((size / page_size) + 1) * page_size;
-
-    if (ftruncate(fd_, new_capacity) == -1) {
-        throw std::runtime_error("ftruncate failed: " + std::string(strerror(errno)));
-    }
+    util::fs::truncate_file(fd_, new_capacity);
 
     unmap_();
     auto ptr = mmap_(nullptr, new_capacity);

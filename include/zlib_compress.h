@@ -7,6 +7,7 @@ struct ZlibStreamDeflatorDeletor {
     void operator()(z_stream* s) {
         if (s) {
             deflateEnd(s);
+            delete s;
         }
     }
 };
@@ -17,7 +18,10 @@ public:
 
     size_t compressBound(size_t input_size) override;
 
-    size_t compress(const void* input_data, size_t input_size, void* output_data, size_t output_size) override;
+    size_t compress(uint8_t* input_data, size_t input_size, uint8_t*& output_data, size_t output_size) override;
+
+    // This helps with test
+    static size_t decompress(uint8_t* input_data, size_t input_size, uint8_t*& output_data, size_t output_size);
 
     void resetStream() override;
 private:

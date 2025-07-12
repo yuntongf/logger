@@ -1,6 +1,6 @@
 #include "file_manager.h"
 
-FileManager::FileManager(fpath dir) : dir_(dir) {}
+FileManager::FileManager(fpath dir) : dir_(dir), log_file_fd_(openLogFile()) {}
 
 FileManager::~FileManager() {
     for (auto fd : cache_file_fds_) {
@@ -38,7 +38,7 @@ std::string FileManager::getNextAvailableFilename() {
         for (const auto& entry : fs::directory_iterator(dir_)) {
             if (entry.is_regular_file()) {
                 std::string name = entry.path().filename().string();
-                if (name.rfind(base, 0) == 0) {  // name starts with base
+                if (name.rfind(base, 0) == 0) {
                     ++suffix;
                 }
             }
@@ -47,7 +47,7 @@ std::string FileManager::getNextAvailableFilename() {
         filename = base + (suffix > 0 ? "_" + std::to_string(suffix) : "") + ".log";
     } catch (const fs::filesystem_error& e) {
         std::cerr << "Filesystem error: " << e.what() << '\n';
-        filename = base + ".log";  // fallback
+        filename = base + ".log";
     }
     return filename;
 }
