@@ -18,7 +18,7 @@
 namespace util::fs {
     using fpath = std::filesystem::path;
 
-    inline int open_rw_file(fpath dir, const std::string& filename) {
+    inline int open_rw_file_with_size(fpath dir, const std::string& filename, std::size_t size) {
         if (!std::filesystem::exists(dir)) {
             throw std::runtime_error("directory " + std::string(dir) + " does not exist");
         }
@@ -27,6 +27,7 @@ namespace util::fs {
         if (fd == -1) {
             perror("failed to open cache file");
         }
+        truncate_file(fd, size);
         return fd;
     }
 

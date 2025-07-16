@@ -16,16 +16,15 @@ Encryptor::~Encryptor() {
     EVP_cleanup();
 }
 
-void Encryptor::encrypt(uint8_t*& data, const std::size_t size) {
-    unsigned char* input_data = static_cast<unsigned char*>(data);
+void Encryptor::encrypt(std::vector<uint8_t>& data) {
     std::vector<unsigned char> ciphertext, iv;
     util::encryption::aes_ctr_encrypt(
         aes_encrypt_key_, 
-        std::vector<unsigned char>(input_data, input_data + size), 
+        data,
         ciphertext, 
         iv
     );
-    memcpy(data, ciphertext.data(), size);
+    std::copy(ciphertext.begin(), ciphertext.end(), data.begin());
 }
 
 void Encryptor::read_server_public_key_() {
@@ -34,7 +33,6 @@ void Encryptor::read_server_public_key_() {
         throw std::runtime_error("Failed to open server public key file: " + std::string(SERVER_KEY_FILE_PATH));
     }
 
-    // Use RAII or manual cleanup
     EVP_PKEY* key = PEM_read_PUBKEY(fp, nullptr, nullptr, nullptr);
     fclose(fp);
 

@@ -2,7 +2,7 @@
 #include "effective_msg.pb.h"
 #include "effective_formatter.h"
 
-void EffectiveFormatter::serialize(const LogMsg& msg, uint8_t*& dest, std::size_t& output_size) const {
+void EffectiveFormatter::serialize(const LogMsg& msg, std::vector<uint8_t>& data) const {
     EffectiveMsg effective_msg;
 
     effective_msg.set_level(static_cast<int>(msg.level));
@@ -15,7 +15,7 @@ void EffectiveFormatter::serialize(const LogMsg& msg, uint8_t*& dest, std::size_
     effective_msg.set_func_name(msg.location.function_name());
     effective_msg.set_msg(std::string(msg.msg).c_str());
 
-    output_size = effective_msg.ByteSizeLong();
-    dest = static_cast<uint8_t*>(operator new(output_size));
-    effective_msg.SerializeToArray(dest, output_size);
+    std::size_t size = effective_msg.ByteSizeLong();
+    data.reserve(size);
+    effective_msg.SerializeToArray(data.data(), size);
 }

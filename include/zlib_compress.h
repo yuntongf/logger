@@ -1,6 +1,7 @@
 #include "compression_interface.h"
 
 #include <zlib.h>
+#include <vector>
 #include <memory>
 
 struct ZlibStreamDeflatorDeletor {
@@ -18,10 +19,10 @@ public:
 
     size_t compressBound(size_t input_size) override;
 
-    size_t compress(uint8_t* input_data, size_t input_size, uint8_t*& output_data, size_t output_size) override;
+    size_t compress(std::vector<uint8_t>& input, std::vector<uint8_t>& output) override;
 
     // This helps with test
-    static size_t decompress(uint8_t* input_data, size_t input_size, uint8_t*& output_data, size_t output_size);
+    static size_t decompress(std::vector<uint8_t>& input, std::vector<uint8_t>& output);
 
     void resetStream() override;
 private:

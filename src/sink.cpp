@@ -3,7 +3,8 @@
 
 #define CACHE_A_FILE_NAME "cache_a.log"
 #define CACHE_B_FILE_NAME "cache_b.log"
-#define LOG_ERR(msg) std::cout << msg << "\n";
+
+#define LOG_ERR(msg) std::cerr << "[Logger error] " << msg << "\n";
 
 constexpr SinkConfig DEFAULT_LOG_CONFIG = {"/log", LogLevel::INFO};
 
@@ -27,26 +28,35 @@ Sink::Sink(const SinkConfig& config) {
 }
 
 void Sink::log(LogMsg msg) {
-    uint8_t* data = nullptr;   
-    std::size_t size = 0;
-    formatter_->serialize(msg, data, size);
-    {
-        std::unique_lock<std::mutex> lck(mtx_);
+    try {
+        std::vector<uint8_t> serialized;
+        formatter_->serialize(msg, serialized);
 
-        auto estimate_size = compressor_->compressBound(size);
-        uint8_t* output_data = static_cast<uint8_t*>(operator new(estimate_size));
-        auto output_size = compressor_->compress(data, size, output_data, estimate_size);
+        int fd_to_flush = -1;
+        {
+            std::scoped_lock lck(mtx_);
 
-        encryptor_->encrypt(output_data, output_size);
+            auto max_compress_size = compressor_->compressBound(serialized.size());
+            std::vector<uint8_t> out;
+            out.reserve(max_compress_size);
+            auto output_size = compressor_->compress(serialized, out);
+            encryptor_->encrypt(out);
+            mem_mapper_->push(out);
 
-        mem_mapper_->push(output_data, output_size);
+            double usage_ratio = mem_mapper_->getRatio();
+            if (usage_ratio > 0.8) {
+                fd_to_flush = main_cache_fd_;
+                std::swap(main_cache_fd_, sub_cache_fd_);
+                mem_mapper_ = std::make_unique<MemMapper>(main_cache_fd_);
+            }
+        }
 
-        double usage_ratio = mem_mapper_->getRatio();
-        if (usage_ratio > 0.8) {
-            std::swap(main_cache_fd_, sub_cache_fd_);
-            executor_->postTask(ExecutorTag::FILE_WRITE_BACK, [this]{
-                file_manager_->writeCacheToLogFile(sub_cache_fd_);
+        if (fd_to_flush != -1) {
+            executor_->postTask(ExecutorTag::FILE_WRITE_BACK, [this, fd_to_flush]{
+                file_manager_->writeCacheToLogFile(fd_to_flush);
             });
         }
+    } catch (const std::exception& e) {
+        LOG_ERR(e.what());
     }
 }

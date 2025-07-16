@@ -72,6 +72,10 @@
         "cinttypes": "cpp",
         "iostream": "cpp",
         "map": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "any": "cpp",
+        "csignal": "cpp",
+        "forward_list": "cpp",
+        "fstream": "cpp"
     }
 }

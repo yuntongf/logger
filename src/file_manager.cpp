@@ -11,7 +11,7 @@ FileManager::~FileManager() {
 
 int FileManager::openCacheFile(const char* filename) {
     try {
-        int fd = util::fs::open_rw_file(dir_, filename);
+        int fd = util::fs::open_rw_file_with_size(dir_, filename, DEFAULT_CACHE_FILE_SIZE);
         cache_file_fds_.push_back(fd);
         return fd;
     } catch (const std::runtime_error& e) {
@@ -20,7 +20,7 @@ int FileManager::openCacheFile(const char* filename) {
 }
 
 bool FileManager::checkLogFileFull() {
-    return false;
+    return util::fs::get_file_size(log_file_fd_);
 }
 
 std::string FileManager::getNextAvailableFilename() {
@@ -53,7 +53,7 @@ std::string FileManager::getNextAvailableFilename() {
 }
 
 int FileManager::openLogFile() {
-    return util::fs::open_rw_file(dir_, getNextAvailableFilename());
+    return util::fs::open_rw_file_with_size(dir_, getNextAvailableFilename(), DEFAULT_LOG_FILE_SIZE);
 }
 
 // Don't need lock because we are running this on one strand

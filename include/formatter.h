@@ -21,5 +21,5 @@ struct LogMsg {
 /* given LogMsg, serialize it */
 class IFormatter {
 public:
-    virtual void serialize(const LogMsg& msg, uint8_t*& dest, std::size_t& output_size) const = 0;
+    virtual void serialize(const LogMsg& msg, std::vector<uint8_t>& data) const = 0;
 };

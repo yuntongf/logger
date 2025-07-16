@@ -15,7 +15,6 @@
 /* Wrapper around mmap */
 class MemMapper {
     using fpath = std::filesystem::path;
-    static constexpr std::size_t DEFAULT_SIZE = 16 * 1024;
     static constexpr uint32_t MAGIC = 0xcafef00d;
 
     struct Header {
@@ -44,7 +43,7 @@ public:
         return (double) header_->data_size / (double) data_capacity;
     }
 
-    void push(const uint8_t* data, const std::size_t size);
+    void push(const std::vector<uint8_t>& data);
 
     uint8_t* data() const;
 

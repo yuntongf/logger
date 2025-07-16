@@ -1,10 +1,8 @@
 #include "mem_mapper.h"
 
-MemMapper::MemMapper(int cache_file_fd) : fd_(cache_file_fd) {
-    auto filesize = util::fs::get_file_size(fd_);
-    capacity_ = std::max(filesize, DEFAULT_SIZE);
-    util::fs::truncate_file(fd_, capacity_);
-
+MemMapper::MemMapper(int cache_file_fd) 
+: fd_(cache_file_fd),
+  capacity_(util::fs::get_file_size(cache_file_fd)) {
     void* ptr = mmap_(nullptr, capacity_);
     header_ = static_cast<Header*>(ptr);
     init_header();
@@ -15,10 +13,10 @@ MemMapper::~MemMapper() {
     unmap_();
 }
 
-void MemMapper::push(const uint8_t* data, const std::size_t size) {
-    std::size_t new_size = header_->data_size + size;
+void MemMapper::push(const std::vector<uint8_t>& data) {
+    std::size_t new_size = header_->data_size + data.size();
     reserve_(new_size);
-    memcpy(data_ + header_->data_size, data, size);
+    memcpy(data_ + header_->data_size, data.data(), data.size());
     header_->data_size = new_size;
 }
 

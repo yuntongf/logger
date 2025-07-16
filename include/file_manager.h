@@ -9,6 +9,10 @@
 
 #include "util.h"
 
+
+constexpr std::size_t DEFAULT_LOG_FILE_SIZE = 1024 * 4096; // 4MB
+constexpr std::size_t DEFAULT_CACHE_FILE_SIZE = 4 * 4096; // 16KB
+
 namespace fs = std::filesystem;
 
 class FileManager {
